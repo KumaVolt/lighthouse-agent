@@ -8,8 +8,4 @@ services:
     container_name: lighthouse-agent
     ports:
       - "3000:3000"
-    environment:
-      - AGENT_ID=test-node-1
-    volumes:
-      - ./agent:/app
     restart: unless-stopped
