@@ -22,13 +22,24 @@ app.post("/audit", async (req, res) => {
         '--chrome-flags=--headless --no-sandbox'
     ];
 
+    const removeTemp = () => fs.unlink(tempFile, (err) => {
+        if (err) console.error("Failed to delete temp file", err);
+    });
+
     execFile('lighthouse', args, async (error) => {
         if (error) {
             console.error("❌ Lighthouse error:", error);
+            removeTemp();
             return res.status(500).json({ error: "Lighthouse failed" });
         }
 
-        const report = fs.readFileSync(tempFile, "utf8");
+        let report;
+        try {
+            report = fs.readFileSync(tempFile, "utf8");
+        } finally {
+            removeTemp();
+        }
+
         const result = {
             url,
             results: JSON.parse(report),
@@ -72,13 +83,24 @@ app.get("/audit", async (req, res) => {
     '--chrome-flags=--headless --no-sandbox'
   ];
 
+  const removeTemp = () => fs.unlink(tempFile, (err) => {
+    if (err) console.error("Failed to delete temp file", err);
+  });
+
   execFile('lighthouse', args, (error) => {
     if (error) {
       console.error("❌ Lighthouse error:", error);
+      removeTemp();
       return res.status(500).json({ error: "Lighthouse failed" });
     }
 
-    const report = fs.readFileSync(tempFile, "utf8");
+    let report;
+    try {
+      report = fs.readFileSync(tempFile, "utf8");
+    } finally {
+      removeTemp();
+    }
+
     res.json({
       url,
       results: JSON.parse(report),
