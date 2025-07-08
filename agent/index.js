@@ -7,38 +7,59 @@ const app = express();
 app.use(bodyParser.json());
 
 app.post("/audit", async (req, res) => {
-  const { url, callback_url } = req.body;
+    const { url, callback_url } = req.body;
 
-  if (!url) {
-    return res.status(400).json({ error: "Missing 'url'" });
-  }
+    if (!url) {
+        return res.status(400).json({ error: "Missing 'url' query parameter" });
+    }
 
-    const tempFile = `/tmp/report-${Date.now()}.json`;
+    if (callback_url) {
+        res.json({ status: "running", url });
+        runAudit(url, callback_url, null);
+    } else {
+        runAudit(url, null, res);
+    }
+});
+
+app.get("/audit", async (req, res) => {
+    const url = req.query.url;
+
+    if (!url) {
+        return res.status(400).json({ error: "Missing 'url' query parameter" });
+    }
+
+    runAudit(url, null, res); 
+});
+
+app.get("/health", (_, res) => res.json({ status: "ok" }));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Agent running on port ${PORT}`));
+
+
+const runAudit = (url, callback_url, res) => {
+
+    const tempFile = `./report-${url}-${Date.now()}.json`;
     const args = [
         url,
-        '--output', 'json',
+        "--output=json",
         `--output-path=${tempFile}`,
-        '--quiet',
-        '--chrome-flags=--headless --no-sandbox'
+        "--chrome-flags=--headless"
     ];
-
-    const removeTemp = () => fs.unlink(tempFile, (err) => {
-        if (err) console.error("Failed to delete temp file", err);
-    });
 
     execFile('lighthouse', args, async (error) => {
         if (error) {
             console.error("❌ Lighthouse error:", error);
-            removeTemp();
-            return res.status(500).json({ error: "Lighthouse failed" });
+            if (!callback_url) {
+                return res.status(500).json({ error: "Lighthouse failed" });
+            }
+            return;
         }
 
         let report;
         try {
             report = fs.readFileSync(tempFile, "utf8");
-        } finally {
-            removeTemp();
-        }
+        } finally {}
 
         const result = {
             url,
@@ -47,7 +68,6 @@ app.post("/audit", async (req, res) => {
         };
 
         if (callback_url) {
-            // Async mode
             fetch(callback_url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -57,59 +77,4 @@ app.post("/audit", async (req, res) => {
             res.json(result);
         }
     });
-  };
-
-  if (callback_url) {
-    res.json({ status: "running", url });
-    runAudit();
-  } else {
-    runAudit();
-  }
-});
-
-app.get("/audit", async (req, res) => {
-  const url = req.query.url;
-
-  if (!url) {
-    return res.status(400).json({ error: "Missing 'url' query parameter" });
-  }
-
-  const tempFile = `/tmp/report-${Date.now()}.json`;
-  const args = [
-    url,
-    '--output', 'json',
-    `--output-path=${tempFile}`,
-    '--quiet',
-    '--chrome-flags=--headless --no-sandbox'
-  ];
-
-  const removeTemp = () => fs.unlink(tempFile, (err) => {
-    if (err) console.error("Failed to delete temp file", err);
-  });
-
-  execFile('lighthouse', args, (error) => {
-    if (error) {
-      console.error("❌ Lighthouse error:", error);
-      removeTemp();
-      return res.status(500).json({ error: "Lighthouse failed" });
-    }
-
-    let report;
-    try {
-      report = fs.readFileSync(tempFile, "utf8");
-    } finally {
-      removeTemp();
-    }
-
-    res.json({
-      url,
-      results: JSON.parse(report),
-      agent: process.env.AGENT_ID || "default"
-    });
-  });
-});
-
-app.get("/health", (_, res) => res.json({ status: "ok" }));
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Agent running on port ${PORT}`));
+};
