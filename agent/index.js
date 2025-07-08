@@ -2,7 +2,6 @@ import express from "express";
 import bodyParser from "body-parser";
 import { exec } from "child_process";
 import fs from "fs";
-import fetch from "node-fetch";
 
 const app = express();
 app.use(bodyParser.json());
