@@ -2,17 +2,16 @@ import express from "express";
 import bodyParser from "body-parser";
 import { execFile } from "child_process";
 import fs from "fs";
-import fetch from "node-fetch";
 
 const app = express();
 app.use(bodyParser.json());
 
 app.post("/audit", async (req, res) => {
-    const { url, callback_url } = req.body;
+  const { url, callback_url } = req.body;
 
-    if (!url) {
-        return res.status(400).json({ error: "Missing 'url'" });
-    }
+  if (!url) {
+    return res.status(400).json({ error: "Missing 'url'" });
+  }
 
     const tempFile = `/tmp/report-${Date.now()}.json`;
     const args = [
@@ -33,7 +32,7 @@ app.post("/audit", async (req, res) => {
         const result = {
             url,
             results: JSON.parse(report),
-            agent: process.env.AGENT_ID || "default"
+            agent: process.env.AGENT_ID || "default",
         };
 
         if (callback_url) {
@@ -43,13 +42,18 @@ app.post("/audit", async (req, res) => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(result),
             }).catch(console.error);
-
-            res.json({ status: "running", url });
         } else {
-            // Sync mode
             res.json(result);
         }
     });
+  };
+
+  if (callback_url) {
+    res.json({ status: "running", url });
+    runAudit();
+  } else {
+    runAudit();
+  }
 });
 
 app.get("/audit", async (req, res) => {
