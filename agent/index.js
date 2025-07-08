@@ -46,6 +46,31 @@ app.post("/audit", async (req, res) => {
     });
 });
 
+app.get("/audit", async (req, res) => {
+  const url = req.query.url;
+
+  if (!url) {
+    return res.status(400).json({ error: "Missing 'url' query parameter" });
+  }
+
+  const tempFile = `/tmp/report-${Date.now()}.json`;
+  const cmd = `lighthouse "${url}" --output json --output-path=${tempFile} --quiet --chrome-flags="--headless --no-sandbox"`;
+
+  exec(cmd, (error) => {
+    if (error) {
+      console.error("❌ Lighthouse error:", error);
+      return res.status(500).json({ error: "Lighthouse failed" });
+    }
+
+    const report = fs.readFileSync(tempFile, "utf8");
+    res.json({
+      url,
+      results: JSON.parse(report),
+      agent: process.env.AGENT_ID || "default"
+    });
+  });
+});
+
 app.get("/health", (_, res) => res.json({ status: "ok" }));
 
 const PORT = process.env.PORT || 3000;
