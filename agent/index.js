@@ -38,8 +38,9 @@ app.listen(PORT, () => console.log(`✅ Agent running on port ${PORT}`));
 
 
 const runAudit = (url, callback_url, res) => {
-
-    const tempFile = `./report-${url}-${Date.now()}.json`;
+    // Sanitize the URL for safe filenames
+    const safeUrl = url.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const tempFile = `/tmp/report-${safeUrl}-${Date.now()}.json`;
     const args = [
         url,
         "--output=json",
@@ -59,7 +60,9 @@ const runAudit = (url, callback_url, res) => {
         let report;
         try {
             report = fs.readFileSync(tempFile, "utf8");
-        } finally {}
+        } finally {
+            fs.unlink(tempFile, () => {});
+        }
 
         const result = {
             url,
