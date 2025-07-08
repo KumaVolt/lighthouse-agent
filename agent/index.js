@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import fs from "fs";
 
 const app = express();
@@ -13,36 +13,38 @@ app.post("/audit", async (req, res) => {
     return res.status(400).json({ error: "Missing 'url'" });
   }
 
-  const tempFile = `/tmp/report-${Date.now()}.json`;
-  const cmd = `lighthouse "${url}" --output json --output-path=${tempFile} --quiet --chrome-flags="--headless --no-sandbox"`;
-
-  const runAudit = () => {
-    exec(cmd, async (error) => {
-      if (error) {
-        console.error("❌ Lighthouse error:", error);
-        if (!callback_url) {
-          return res.status(500).json({ error: "Lighthouse failed" });
-        }
-        return;
-      }
-
-      const report = fs.readFileSync(tempFile, "utf8");
-      const result = {
+    const tempFile = `/tmp/report-${Date.now()}.json`;
+    const args = [
         url,
-        results: JSON.parse(report),
-        agent: process.env.AGENT_ID || "default",
-      };
+        '--output', 'json',
+        `--output-path=${tempFile}`,
+        '--quiet',
+        '--chrome-flags=--headless --no-sandbox'
+    ];
 
-      if (callback_url) {
-        // Async mode
-        fetch(callback_url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(result),
-        }).catch(console.error);
-      } else {
-        res.json(result);
-      }
+    execFile('lighthouse', args, async (error) => {
+        if (error) {
+            console.error("❌ Lighthouse error:", error);
+            return res.status(500).json({ error: "Lighthouse failed" });
+        }
+
+        const report = fs.readFileSync(tempFile, "utf8");
+        const result = {
+            url,
+            results: JSON.parse(report),
+            agent: process.env.AGENT_ID || "default",
+        };
+
+        if (callback_url) {
+            // Async mode
+            fetch(callback_url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(result),
+            }).catch(console.error);
+        } else {
+            res.json(result);
+        }
     });
   };
 
@@ -62,9 +64,15 @@ app.get("/audit", async (req, res) => {
   }
 
   const tempFile = `/tmp/report-${Date.now()}.json`;
-  const cmd = `lighthouse "${url}" --output json --output-path=${tempFile} --quiet --chrome-flags="--headless --no-sandbox"`;
+  const args = [
+    url,
+    '--output', 'json',
+    `--output-path=${tempFile}`,
+    '--quiet',
+    '--chrome-flags=--headless --no-sandbox'
+  ];
 
-  exec(cmd, (error) => {
+  execFile('lighthouse', args, (error) => {
     if (error) {
       console.error("❌ Lighthouse error:", error);
       return res.status(500).json({ error: "Lighthouse failed" });
