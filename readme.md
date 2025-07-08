@@ -6,7 +6,7 @@ Requires Node.js 18 or higher.
 
 ## 🧪 API
 
-POST `/run-audit`
+POST `/audit`
 
 ```json
 {
