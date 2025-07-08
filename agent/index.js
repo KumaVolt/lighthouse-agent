@@ -45,7 +45,7 @@ const runAudit = (url, callback_url, res) => {
         url,
         "--output=json",
         `--output-path=${tempFile}`,
-        "--chrome-flags=--headless"
+        "--chrome-flags=--headless --no-sandbox"
     ];
 
     execFile('lighthouse', args, async (error) => {
