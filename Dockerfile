@@ -16,6 +16,6 @@ COPY agent/ /app/
 # Install dependencies from the correct package.json
 RUN npm install
 
-EXPOSE 3000
+EXPOSE 3000 3001
 
-CMD ["node", "index.js"]
+CMD ["node", "start.js"]

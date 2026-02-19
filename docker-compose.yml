@@ -10,6 +10,9 @@ services:
     container_name: lighthouse-agent
     ports:
       - "3000:3000"
+      - "3001:3001"
+    environment:
+      - DISABLE_MCP=false  # Set to "true" to disable the MCP server
     restart: unless-stopped
     networks:
           - proxy

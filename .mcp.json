@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "lighthouse-agent": {
+      "command": "node",
+      "args": ["agent/mcp-server.js"]
+    }
+  }
+}
